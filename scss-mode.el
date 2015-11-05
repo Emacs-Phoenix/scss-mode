@@ -170,12 +170,7 @@ of the closing brace of a block."
 
              ;; Start of buffer.
              ((bobp)
-              (setq not-indented nil)))))))
-
-      ;; We've figured out the indentation, so do it.
-      (if (and cur-indent (> cur-indent 0))
-	  (indent-line-to cur-indent)
-        (indent-line-to 0)))))
+              (setq not-indented nil))))))))))
 
 
 ;;============
