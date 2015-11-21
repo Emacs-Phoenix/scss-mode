@@ -104,79 +104,6 @@ HYPERLINK HIGHLIGHT)"
       (looking-at "^\\s-*#"))))
 
 
-(defun scss-block-indent ()
-  "If point is in a block, return the indentation of the first line of that
-block (the line containing the opening brace).  Used to set the indentation
-of the closing brace of a block."
-  (save-excursion
-    (save-match-data
-      (let ((opoint (point))
-            (apoint (search-backward "{" nil t)))
-        (when apoint
-          ;; This is a bit of a hack and doesn't allow for strings.  We really
-          ;; want to parse by sexps at some point.
-          (let ((close-braces (count-matches "}" apoint opoint))
-                (open-braces 0))
-            (while (and apoint (> close-braces open-braces))
-              (setq apoint (search-backward "{" nil t))
-              (when apoint
-                (setq close-braces (count-matches "}" apoint opoint))
-                (setq open-braces (1+ open-braces)))))
-          (if apoint
-              (current-indentation)
-            nil))))))
-
-
-(defun scss-indent-line ()
-  "Indent current line as scss code."
-  (interactive)
-  (beginning-of-line)
-  (if (bobp)
-      (indent-line-to 0)                ; First line is always non-indented
-    (let ((not-indented t)
-          (block-indent (scss-block-indent))
-          cur-indent)
-      (cond
-       ((and (looking-at "^\\s-*}\\s-*$") block-indent)
-        ;; This line contains a closing brace and we're at the inner
-        ;; block, so we should indent it matching the indentation of
-        ;; the opening brace of the block.
-        (setq cur-indent block-indent))
-       (t
-        ;; Otherwise, we did not start on a block-ending-only line.
-        (save-excursion
-          ;; Iterate backwards until we find an indentation hint
-          (while not-indented
-            (forward-line -1)
-            (cond
-             ;; Comment lines are ignored unless we're at the start of the
-             ;; buffer.
-             ((scss-comment-line-p)
-              (if (bobp)
-                  (setq not-indented nil)))
-
-             ;; Brace or paren on a line by itself will already be indented to
-             ;; the right level, so we can cheat and stop there.
-             ((looking-at "^\\s-*}\\s-*")
-              (setq cur-indent (current-indentation))
-              (setq not-indented nil))
-
-             ;; Indent by one level more than the start of our block.  We lose
-             ;; if there is more than one block opened and closed on the same
-             ;; line but it's still unbalanced; hopefully people don't do that.
-             ((looking-at "^.*{[^\n}]*$")
-              (setq cur-indent (+ (current-indentation) scss-indent-level))
-              (setq not-indented nil))
-
-             ;; Start of buffer.
-             ((bobp)
-              (setq not-indented nil)))))))
-
-      ;; We've figured out the indentation, so do it.
-      (if (and cur-indent (> cur-indent 0))
-	  (indent-line-to cur-indent)
-        (indent-line-to 0)))))
-
 
 ;;============
 
@@ -193,8 +120,7 @@ Special commands:
   (modify-syntax-entry ?* ". 23b" css-mode-syntax-table)
   (modify-syntax-entry ?\n ">" css-mode-syntax-table)
   (add-to-list 'compilation-error-regexp-alist scss-compile-error-regex)
-  (add-hook 'after-save-hook 'scss-compile-maybe nil t)
-  (set (make-local-variable 'indent-line-function) 'scss-indent-line))
+  (add-hook 'after-save-hook 'scss-compile-maybe nil t))
 
 (define-key scss-mode-map "\C-c\C-c" 'scss-compile)
 
